@@ -1,0 +1,12 @@
+services:
+  redis:
+    image: redis:8
+    container_name: planck-redis
+
+  postgres:
+    image: postgres:17
+    container_name: planck-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
