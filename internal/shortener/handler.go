@@ -1,9 +1,6 @@
-package internal
+package shortener
 
-import (
-	"net/http"
-	"planck-lol/internal/controller"
-)
+import "net/http"
 
 func IndexHandle(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
@@ -14,10 +11,11 @@ func IndexHandle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetCodeHandle(controller *controller.LinkController) http.HandlerFunc {
+func GetCodeHandle(s *LinkService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		code := r.PathValue("code")
-		link, err := controller.GetLink(code)
+
+		link, err := s.GetLink(code)
 		if err != nil {
 			http.Error(w, "Link Not Found", http.StatusNotFound)
 			return
@@ -28,7 +26,7 @@ func GetCodeHandle(controller *controller.LinkController) http.HandlerFunc {
 	}
 }
 
-func CreateCodeHandle(controller *controller.LinkController) http.HandlerFunc {
+func CreateCodeHandle(s *LinkService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)

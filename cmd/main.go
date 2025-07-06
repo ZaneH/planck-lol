@@ -1,12 +1,9 @@
 package main
 
-import (
-	"planck-lol/internal/controller"
-	http "planck-lol/internal/http"
-)
+import "planck-lol/internal/shortener"
 
 func main() {
-	controller := &controller.LinkController{}
-	server := http.SetupServer(controller)
+	linkService := &shortener.LinkService{}
+	server := shortener.SetupServer(linkService)
 	server.ListenAndServe()
 }

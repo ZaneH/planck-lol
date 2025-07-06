@@ -1,17 +1,16 @@
-package internal
+package shortener
 
 import (
 	"fmt"
 	"net/http"
 	"os"
-	"planck-lol/internal/controller"
 )
 
-func SetupServer(c *controller.LinkController) *http.Server {
+func SetupServer(s *LinkService) *http.Server {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/create", CreateCodeHandle(c))
-	mux.HandleFunc("/{code}", GetCodeHandle(c))
+	mux.HandleFunc("/create", CreateCodeHandle(s))
+	mux.HandleFunc("/{code}", GetCodeHandle(s))
 	mux.HandleFunc("/", IndexHandle)
 
 	port, exists := os.LookupEnv("PORT")

@@ -2,7 +2,8 @@
 
 ## Development
 
-We are using Nix to provide Go and the [migrate](https://github.com/golang-migrate/migrate) CLI tool used for DB migrations.
+We are using Nix to provide Go and the [migrate](https://github.com/golang-migrate/migrate) CLI tool used for DB
+migrations.
 
 #### Requirements:
 - Nix
@@ -22,3 +23,9 @@ sure everything is setup correctly.
 ```sh
 migrate -source file://migrations -database postgres://postgres:postgres@localhost:5432/postgres\?sslmode=disable -verbose up
 ```
+
+## Motivation
+
+There was [a video](https://www.youtube.com/watch?v=xFeWVugaouk) that motivated me to try making a link shortener. I'd
+like to continue practicing Go (+ systems design) and this seems like a worthwhile project that won't take too much
+time.

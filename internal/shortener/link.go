@@ -1,4 +1,4 @@
-package internal
+package shortener
 
 type Link struct {
 	ShortUrl  string `json:"short_url"`
