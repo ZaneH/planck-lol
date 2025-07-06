@@ -2,7 +2,7 @@
 
 ## Development
 
-We are using Nix to provide Go and the [migrate](github.com/golang-migrate/migrate) CLI tool used for DB migrations.
+We are using Nix to provide Go and the [migrate](https://github.com/golang-migrate/migrate) CLI tool used for DB migrations.
 
 #### Requirements:
 - Nix
