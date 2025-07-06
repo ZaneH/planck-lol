@@ -2,14 +2,15 @@ package internal
 
 import (
 	"net/http"
+	"planck-lol/internal/controller"
 )
 
-func SetupServer() *http.Server {
+func SetupServer(c *controller.LinkController) *http.Server {
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("/create", CreateCodeHandle(c))
+	mux.HandleFunc("/{code}", GetCodeHandle(c))
 	mux.HandleFunc("/", IndexHandle)
-	mux.HandleFunc("/create", CreateCodeHandle)
-	mux.HandleFunc("/:code", GetCodeHandle)
 
 	server := &http.Server{
 		Addr:    ":8080",
