@@ -12,7 +12,13 @@ We are using Nix to provide Go and the [migrate](github.com/golang-migrate/migra
 >
 >If using `direnv`, run `direnv allow` to whitelist the current directory.
 
-### Activate Shell
+### Check Your Environment
 
 Use `nix develop` to activate the shell within this repo if you're not already using `direnv`. Run `migrate` to make
 sure everything is setup correctly.
+
+### Run Migrations
+
+```sh
+migrate -source file://migrations -database postgres://postgres:postgres@localhost:5432/postgres\?sslmode=disable -verbose up
+```
