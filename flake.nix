@@ -23,9 +23,10 @@
           };
 
           subPackages = [ "cmd/migrate" ];
-          goFlags = [ "-tags" "postgres" ];
 
           vendorHash = "sha256-yJ1D0uhUQXBjw7ikRmcW8DFn0wvnBCw6jDYl3UQepXU=";
+
+          tags = [ "postgres" ];
         };
 
       in {
