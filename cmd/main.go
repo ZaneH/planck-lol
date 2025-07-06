@@ -1,10 +1,12 @@
 package main
 
 import (
+	"planck-lol/internal/controller"
 	http "planck-lol/internal/http"
 )
 
 func main() {
-	server := http.SetupServer()
+	controller := &controller.LinkController{}
+	server := http.SetupServer(controller)
 	server.ListenAndServe()
 }

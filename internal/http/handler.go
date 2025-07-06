@@ -1,8 +1,6 @@
 package internal
 
 import (
-	"fmt"
-	"io"
 	"net/http"
 	"planck-lol/internal/controller"
 )
