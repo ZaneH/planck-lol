@@ -2,7 +2,7 @@
 
 ## Development
 
-We are using Nix to manage the `migrate` CLI tool used for DB migrations.
+We are using Nix to provide Go and the [migrate](github.com/golang-migrate/migrate) CLI tool used for DB migrations.
 
 #### Requirements:
 - Nix
@@ -15,4 +15,4 @@ We are using Nix to manage the `migrate` CLI tool used for DB migrations.
 ### Activate Shell
 
 Use `nix develop` to activate the shell within this repo if you're not already using `direnv`. Run `migrate` to make
-sure it installed correctly.
+sure everything is setup correctly.
