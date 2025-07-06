@@ -35,10 +35,6 @@
             pkgs.go
             migrate
           ];
-
-          shellHook = ''
-            echo "Welcome to the Planck URL shortener development shell!"
-          '';
         };
       });
 }
