@@ -32,6 +32,3 @@ go.work.sum
 # .vscode/
 
 .direnv/
-
-# Emacs
-.dir.locals.el
