@@ -9,9 +9,9 @@ import (
 func SetupServer(s *LinkService) *http.Server {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/create", CreateCodeHandle(s))
-	mux.HandleFunc("/{code}", GetCodeHandle(s))
-	mux.HandleFunc("/", IndexHandle)
+	mux.HandleFunc("/create", handleCodeCreate(s))
+	mux.HandleFunc("/{code}", handleCodeGet(s))
+	mux.HandleFunc("/", handleIndex)
 
 	port, exists := os.LookupEnv("PORT")
 	if !exists {
