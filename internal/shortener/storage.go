@@ -2,6 +2,8 @@ package shortener
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -15,9 +17,27 @@ type LinkStorage struct {
 
 func (s *LinkStorage) findByShortCode(code string) (*Link, error) {
 	var link Link
-	err := s.DBPool.QueryRow(context.Background(), `SELECT * FROM links WHERE short_code = $1`, code).Scan(
-		&link.ID, &link.ShortCode, &link.LongUrl, &link.CreatedAt, &link.ExpiresAt)
-	return &link, err
+	err := s.Cache.HGetAll(context.Background(), fmt.Sprintf("link:%s", code)).Scan(&link)
+
+	if link.ID == "" {
+		err = s.DBPool.QueryRow(context.Background(), `SELECT * FROM links WHERE short_code = $1 WITH NOLOCK`, code).Scan(
+			&link.ID, &link.ShortCode, &link.LongUrl, &link.CreatedAt, &link.ExpiresAt)
+
+		if err != nil {
+			log.Printf("failed to query links table: %+v", err)
+			return nil, err
+		}
+
+		err = s.Cache.HSet(context.Background(), fmt.Sprintf("link:%s", code), link).Err()
+		if err != nil {
+			log.Printf("failed to set link in cache: %+v", err)
+			return nil, err
+		}
+
+		return &link, err
+	}
+
+	return &link, nil
 }
 
 func (s *LinkStorage) insertLink(code *string, url string, expiration *time.Time) error {

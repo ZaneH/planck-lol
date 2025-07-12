@@ -23,4 +23,4 @@ redis-create:
 # Expose redis service to localhost:6379
 redis-expose:
 	kubectl port-forward \
-		svc/planck-lol-redis 6379:6379
+		svc/planck-lol-redis-master 6379:6379
