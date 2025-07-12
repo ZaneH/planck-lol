@@ -1,0 +1,8 @@
+#+begin_src
+oha -n 1000 http://localhost:8888/123 -o out.oha --output-format text
+#+end_src
+
+* History
+** [[file:90e5ee9868c07259599bd5db8e2f297adf3f3dfc.oha]]
+This was the first benchmark committed. It uses the default Redis config, default PostgreSQL config and doesn't attempt
+to do anything clever. The benchmark uses the Kubernetes config from the commit hash (2 pods by default). No ingress.

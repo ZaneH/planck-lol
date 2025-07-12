@@ -20,17 +20,17 @@ func (s *LinkStorage) findByShortCode(code string) (*Link, error) {
 	err := s.Cache.HGetAll(context.Background(), fmt.Sprintf("link:%s", code)).Scan(&link)
 
 	if link.ID == "" {
-		err = s.DBPool.QueryRow(context.Background(), `SELECT * FROM links WHERE short_code = $1 WITH NOLOCK`, code).Scan(
+		err = s.DBPool.QueryRow(context.Background(), `SELECT * FROM links WHERE short_code = $1`, code).Scan(
 			&link.ID, &link.ShortCode, &link.LongUrl, &link.CreatedAt, &link.ExpiresAt)
 
 		if err != nil {
-			log.Printf("failed to query links table: %+v", err)
+			log.Printf("failed to query links table: %v", err)
 			return nil, err
 		}
 
 		err = s.Cache.HSet(context.Background(), fmt.Sprintf("link:%s", code), link).Err()
 		if err != nil {
-			log.Printf("failed to set link in cache: %+v", err)
+			log.Printf("failed to set link in cache: %v", err)
 			return nil, err
 		}
 
