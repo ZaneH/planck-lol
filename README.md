@@ -21,7 +21,7 @@ that everything is setup correctly.
 ### Run Migrations
 
 ```sh
-migrate -source file://migrations -database postgres://postgres:postgres@localhost:5432/postgres\?sslmode=disable -verbose up
+$ make db-migrate
 ```
 
 ### Run in Kubernetes
@@ -31,11 +31,8 @@ To run in a k8s environment, we use k3d, Tilt and helm provided by Nix.
 #### Setup Redis + PostgreSQL
 
 ```sh
-$ helm install planck-lol-db bitnami/postgresql \
-  --set auth.postgresPassword=secretpassword
-$ helm install planck-lol-redis bitnami/redis \
-  --set architecture=standalone \
-  --set auth.enabled=false
+$ make db-create
+$ make redis-create
 ```
 
 #### Run Service
