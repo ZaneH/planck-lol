@@ -1,4 +1,4 @@
-# Planck.lol
+# planck.lol
 
 ## Development
 
@@ -15,13 +15,33 @@ migrations.
 
 ### Check Your Environment
 
-Use `nix develop` to activate the shell within this repo if you're not already using `direnv`. Run `migrate` to make
-sure everything is setup correctly.
+Use `nix develop` to activate the shell within this repo if you're not already using `direnv`. Run `migrate` to test
+that everything is setup correctly.
 
 ### Run Migrations
 
 ```sh
 migrate -source file://migrations -database postgres://postgres:postgres@localhost:5432/postgres\?sslmode=disable -verbose up
+```
+
+### Run in Kubernetes
+
+To run in a k8s environment, we use k3d, Tilt and helm provided by Nix.
+
+#### Setup Redis + PostgreSQL
+
+```sh
+$ helm install planck-lol-db bitnami/postgresql \
+  --set auth.postgresPassword=secretpassword
+$ helm install planck-lol-redis bitnami/redis \
+  --set architecture=standalone \
+  --set auth.enabled=false
+```
+
+#### Run Service
+
+```sh
+$ tilt up
 ```
 
 ## Motivation

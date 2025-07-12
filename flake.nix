@@ -6,7 +6,7 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils  }:
+  outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -28,12 +28,17 @@
 
           tags = [ "postgres" ];
         };
-
       in {
         devShells.default = pkgs.mkShell {
           buildInputs = [
             pkgs.go
             migrate
+
+            pkgs.tilt
+            pkgs.k3d
+            pkgs.kubectl
+            pkgs.kubernetes-helm
+            pkgs.redis
           ];
         };
       });
