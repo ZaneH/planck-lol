@@ -1,3 +1,10 @@
+# Create cluster for dev environment
+cluster-create:
+	k3d cluster create planck-dev \
+		--registry-create planck-registry:0.0.0.0:5000 \
+		--agents 2 \
+		--port "8080:80@loadbalancer"
+
 # Create database service using helm
 db-create:
 	helm install planck-lol-db bitnami/postgresql \
