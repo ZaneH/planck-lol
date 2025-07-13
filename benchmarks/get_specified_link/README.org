@@ -1,8 +1,9 @@
 #+begin_src
-oha -n 1000 http://localhost:8888/123 -o out.oha --output-format text
+oha -n 3000 -q 3500 --no-tui http://localhost:8888/asdf -o out.oha --output-format text -u s
 #+end_src
 
 * History
-** [[file:90e5ee9868c07259599bd5db8e2f297adf3f3dfc.oha]]
+** [[file:9bbd738e1c0d9983d87251ef4155f66146b7bd44.oha]]
 This was the first benchmark committed. It uses the default Redis config, default PostgreSQL config and doesn't attempt
-to do anything clever. The benchmark uses the Kubernetes config from the commit hash (2 pods by default). No ingress.
+to do anything clever. There are 2 pods handling requests and no cluster setup for either DB. The results speak for
+themselves. This service can easily get overloaded.
