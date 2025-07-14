@@ -15,5 +15,8 @@ docker_build_with_restart(
     ]
 )
 
-k8s_yaml('k8s/deployment.yaml')
+k8s_yaml('k8s/app/deployment.yaml')
 k8s_resource('planck-lol-service', port_forwards='8888:8080')
+
+local('helm upgrade --install redis bitnami/redis -f k8s/redis/values.yaml')
+local('kubectl apply -f k8s/postgres/citus.yaml')

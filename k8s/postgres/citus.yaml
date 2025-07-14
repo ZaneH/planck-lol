@@ -1,0 +1,608 @@
+# ConfigMap with Patroni configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: planck-lol-patroni-config
+  labels:
+    application: patroni
+    cluster-name: planck-lol
+data:
+  patroni.yml: |
+    scope: planck-lol
+    name: ${PATRONI_NAME}
+
+    restapi:
+      listen: 0.0.0.0:8008
+      connect_address: ${PATRONI_KUBERNETES_POD_IP}:8008
+
+    kubernetes:
+      namespace: ${PATRONI_KUBERNETES_NAMESPACE}
+      labels:
+        application: patroni
+        cluster-name: planck-lol
+      use_endpoints: true
+      bypass_api_service: true
+
+    bootstrap:
+      dcs:
+        ttl: 30
+        loop_wait: 10
+        retry_timeout: 10
+        maximum_lag_on_failover: 1048576
+        postgresql:
+          use_pg_rewind: true
+          use_slots: true
+          parameters:
+            max_connections: 100
+            shared_buffers: 128MB
+            ssl: "off"
+            max_prepared_transactions: 200
+      
+      initdb:
+        - encoding: UTF8
+        - data-checksums
+      
+      pg_hba:
+        - local all all trust
+        - host all all 127.0.0.1/32 trust
+        - host all all ::1/128 trust
+        - host all all 0.0.0.0/0 md5
+        - host replication ${PATRONI_REPLICATION_USERNAME} 0.0.0.0/0 md5
+      
+      users:
+        ${PATRONI_SUPERUSER_USERNAME}:
+          password: ${PATRONI_SUPERUSER_PASSWORD}
+          options:
+            - createrole
+            - createdb
+
+    postgresql:
+      listen: 0.0.0.0:5432
+      connect_address: ${PATRONI_KUBERNETES_POD_IP}:5432
+      data_dir: ${PATRONI_POSTGRESQL_DATA_DIR}
+      pgpass: ${PATRONI_POSTGRESQL_PGPASS}
+      authentication:
+        replication:
+          username: ${PATRONI_REPLICATION_USERNAME}
+          password: ${PATRONI_REPLICATION_PASSWORD}
+        superuser:
+          username: ${PATRONI_SUPERUSER_USERNAME}
+          password: ${PATRONI_SUPERUSER_PASSWORD}
+
+    citus:
+      group: ${PATRONI_CITUS_GROUP}
+      database: ${PATRONI_CITUS_DATABASE}
+
+---
+# headless services to avoid deletion of planck-lol-*-config endpoints
+apiVersion: v1
+kind: Service
+metadata:
+  name: planck-lol-0-config
+  labels:
+    application: patroni
+    cluster-name: planck-lol
+    citus-group: "0"
+spec:
+  clusterIP: None
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: planck-lol-1-config
+  labels:
+    application: patroni
+    cluster-name: planck-lol
+    citus-group: "1"
+spec:
+  clusterIP: None
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: planck-lol-2-config
+  labels:
+    application: patroni
+    cluster-name: planck-lol
+    citus-group: "2"
+spec:
+  clusterIP: None
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: &cluster_name planck-lol-0
+  labels: &labels
+    application: patroni
+    cluster-name: planck-lol
+    citus-group: "0"
+    citus-type: coordinator
+spec:
+  replicas: 3
+  serviceName: *cluster_name
+  selector:
+    matchLabels:
+      <<: *labels
+  template:
+    metadata:
+      labels:
+        <<: *labels
+    spec:
+      serviceAccountName: planck-lol
+      containers:
+        - name: *cluster_name
+          image: localhost:5000/patroni-citus-k8s
+          imagePullPolicy: IfNotPresent
+          command:
+            ["/usr/bin/python3", "/patroni.py", "/etc/patroni/patroni.yml"]
+          readinessProbe:
+            httpGet:
+              scheme: HTTP
+              path: /readiness
+              port: 8008
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+            - containerPort: 8008
+              protocol: TCP
+            - containerPort: 5432
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/postgres/pgdata
+              name: pgdata
+            - mountPath: /etc/patroni
+              name: patroni-config
+          env:
+            - name: PATRONI_KUBERNETES_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: PATRONI_KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: PATRONI_CITUS_DATABASE
+              value: planck_lol
+            - name: PATRONI_CITUS_GROUP
+              value: "0"
+            - name: PATRONI_SUPERUSER_USERNAME
+              value: postgres
+            - name: PATRONI_SUPERUSER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: planck-lol
+                  key: superuser-password
+            - name: PATRONI_REPLICATION_USERNAME
+              value: standby
+            - name: PATRONI_REPLICATION_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: planck-lol
+                  key: replication-password
+            - name: PATRONI_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: PATRONI_POSTGRESQL_DATA_DIR
+              value: /home/postgres/pgdata/pgroot/data
+            - name: PATRONI_POSTGRESQL_PGPASS
+              value: /tmp/pgpass
+      terminationGracePeriodSeconds: 0
+      volumes:
+        - name: pgdata
+          emptyDir: {}
+        - name: patroni-config
+          configMap:
+            name: planck-lol-patroni-config
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: &cluster_name planck-lol-1
+  labels: &labels
+    application: patroni
+    cluster-name: planck-lol
+    citus-group: "1"
+    citus-type: worker
+spec:
+  replicas: 2
+  serviceName: *cluster_name
+  selector:
+    matchLabels:
+      <<: *labels
+  template:
+    metadata:
+      labels:
+        <<: *labels
+    spec:
+      serviceAccountName: planck-lol
+      containers:
+        - name: *cluster_name
+          image: localhost:5000/patroni-citus-k8s
+          imagePullPolicy: IfNotPresent
+          command:
+            ["/usr/bin/python3", "/patroni.py", "/etc/patroni/patroni.yml"]
+          readinessProbe:
+            httpGet:
+              scheme: HTTP
+              path: /readiness
+              port: 8008
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+            - containerPort: 8008
+              protocol: TCP
+            - containerPort: 5432
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/postgres/pgdata
+              name: pgdata
+            - mountPath: /etc/patroni
+              name: patroni-config
+          env:
+            - name: PATRONI_KUBERNETES_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: PATRONI_KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: PATRONI_CITUS_DATABASE
+              value: planck_lol
+            - name: PATRONI_CITUS_GROUP
+              value: "1"
+            - name: PATRONI_SUPERUSER_USERNAME
+              value: postgres
+            - name: PATRONI_SUPERUSER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: planck-lol
+                  key: superuser-password
+            - name: PATRONI_REPLICATION_USERNAME
+              value: standby
+            - name: PATRONI_REPLICATION_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: planck-lol
+                  key: replication-password
+            - name: PATRONI_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: PATRONI_POSTGRESQL_DATA_DIR
+              value: /home/postgres/pgdata/pgroot/data
+            - name: PATRONI_POSTGRESQL_PGPASS
+              value: /tmp/pgpass
+      terminationGracePeriodSeconds: 0
+      volumes:
+        - name: pgdata
+          emptyDir: {}
+        - name: patroni-config
+          configMap:
+            name: planck-lol-patroni-config
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: &cluster_name planck-lol-2
+  labels: &labels
+    application: patroni
+    cluster-name: planck-lol
+    citus-group: "2"
+    citus-type: worker
+spec:
+  replicas: 2
+  serviceName: *cluster_name
+  selector:
+    matchLabels:
+      <<: *labels
+  template:
+    metadata:
+      labels:
+        <<: *labels
+    spec:
+      serviceAccountName: planck-lol
+      containers:
+        - name: *cluster_name
+          image: localhost:5000/patroni-citus-k8s
+          imagePullPolicy: IfNotPresent
+          command:
+            ["/usr/bin/python3", "/patroni.py", "/etc/patroni/patroni.yml"]
+          readinessProbe:
+            httpGet:
+              scheme: HTTP
+              path: /readiness
+              port: 8008
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+            - containerPort: 8008
+              protocol: TCP
+            - containerPort: 5432
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/postgres/pgdata
+              name: pgdata
+            - mountPath: /etc/patroni
+              name: patroni-config
+          env:
+            - name: PATRONI_KUBERNETES_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: PATRONI_KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: PATRONI_CITUS_DATABASE
+              value: planck_lol
+            - name: PATRONI_CITUS_GROUP
+              value: "2"
+            - name: PATRONI_SUPERUSER_USERNAME
+              value: postgres
+            - name: PATRONI_SUPERUSER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: planck-lol
+                  key: superuser-password
+            - name: PATRONI_REPLICATION_USERNAME
+              value: standby
+            - name: PATRONI_REPLICATION_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: planck-lol
+                  key: replication-password
+            - name: PATRONI_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: PATRONI_POSTGRESQL_DATA_DIR
+              value: /home/postgres/pgdata/pgroot/data
+            - name: PATRONI_POSTGRESQL_PGPASS
+              value: /tmp/pgpass
+      terminationGracePeriodSeconds: 0
+      volumes:
+        - name: pgdata
+          emptyDir: {}
+        - name: patroni-config
+          configMap:
+            name: planck-lol-patroni-config
+
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: planck-lol-0
+  labels:
+    application: patroni
+    cluster-name: planck-lol
+    citus-group: "0"
+    citus-type: coordinator
+subsets: []
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: planck-lol-0
+  labels:
+    application: patroni
+    cluster-name: planck-lol
+    citus-group: "0"
+    citus-type: coordinator
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: planck-lol-1
+  labels:
+    application: patroni
+    cluster-name: planck-lol
+    citus-group: "1"
+    citus-type: worker
+subsets: []
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: planck-lol-1
+  labels:
+    application: patroni
+    cluster-name: planck-lol
+    citus-group: "1"
+    citus-type: worker
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: planck-lol-2
+  labels:
+    application: patroni
+    cluster-name: planck-lol
+    citus-group: "2"
+    citus-type: worker
+subsets: []
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: planck-lol-2
+  labels:
+    application: patroni
+    cluster-name: planck-lol
+    citus-group: "2"
+    citus-type: worker
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: planck-lol-workers
+  labels: &labels
+    application: patroni
+    cluster-name: planck-lol
+    citus-type: worker
+    role: primary
+spec:
+  type: ClusterIP
+  selector:
+    <<: *labels
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: &cluster_name planck-lol
+  labels:
+    application: patroni
+    cluster-name: *cluster_name
+type: Opaque
+data:
+  superuser-password: c2VjcmV0cGFzc3dvcmQ=
+  replication-password: cmVwLXBhc3M=
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: planck-lol
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: planck-lol
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - update
+      - watch
+      # delete and deletecollection are required only for 'patronictl remove'
+      - delete
+      - deletecollection
+  - apiGroups:
+      - ""
+    resources:
+      - endpoints
+    verbs:
+      - get
+      - patch
+      - update
+      # the following three privileges are necessary only when using endpoints
+      - create
+      - list
+      - watch
+      # delete and deletecollection are required only for for 'patronictl remove'
+      - delete
+      - deletecollection
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  # The following privilege is only necessary for creation of headless service
+  # for planck-lol-config endpoint, in order to prevent cleaning it up by the
+  # k8s master. You can avoid giving this privilege by explicitly creating the
+  # service like it is done in this manifest (lines 2..10)
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - create
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: planck-lol
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: planck-lol
+subjects:
+  - kind: ServiceAccount
+    name: planck-lol
+
+# Following privileges are only required if deployed not in the "default"
+# namespace and you want Patroni to bypass kubernetes service
+# (PATRONI_KUBERNETES_BYPASS_API_SERVICE=true)
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: patroni-k8s-ep-access
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - endpoints
+    resourceNames:
+      - kubernetes
+    verbs:
+      - get
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: patroni-k8s-ep-access
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: patroni-k8s-ep-access
+subjects:
+  - kind: ServiceAccount
+    name: planck-lol
+    # The namespace must be specified explicitly.
+    # If deploying to the different namespace you have to change it.
+    namespace: default

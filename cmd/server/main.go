@@ -3,17 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
+	"log"
 	"os"
 	"planck-lol/internal/shortener"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
 	err := run()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unhandled error: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Unhandled error: %v\n", err)
 	}
 }
 
