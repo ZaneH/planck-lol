@@ -5,7 +5,7 @@
 We are using Nix to provide Go and the [migrate](https://github.com/golang-migrate/migrate) CLI tool used for DB
 migrations.
 
-#### Requirements:
+##### Requirements:
 - Nix
 - direnv (optional)
 
@@ -13,32 +13,23 @@ migrations.
 >
 >If using `direnv`, run `direnv allow` to whitelist the current directory.
 
-### Check Your Environment
+#### Check Your Environment
 
-Use `nix develop` to activate the shell within this repo if you're not already using `direnv`. Run `migrate` to test
-that everything is setup correctly.
+If you're not using `direnv`, run `nix develop` to activate the Nix shell in this repo. Then run `migrate`, `k3d` or
+`kubectl` to test that the required tools are available.
+
+### Run in Kubernetes
+
+We use k3d + Tilt to manage the local K8s environment. To start the app + infra, run:
+
+```sh
+$ tilt up
+```
 
 ### Run Migrations
 
 ```sh
 $ make db-migrate
-```
-
-### Run in Kubernetes
-
-To run in a k8s environment, we use k3d, Tilt and helm provided by Nix.
-
-#### Setup Redis + PostgreSQL
-
-```sh
-$ make db-create
-$ make redis-create
-```
-
-#### Run Service
-
-```sh
-$ tilt up
 ```
 
 ## Motivation
